@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Downloader</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>YouTube Video Downloader</h1>
+            <p>Enter a YouTube URL below to download videos</p>
+        </header>
+        
+        <main>
+            <form id="downloadForm" action="/download" method="post">
+                <div class="input-group">
+                    <label for="url">YouTube Video URL:</label>
+                    <input type="url" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                </div>
+                
+                <button type="submit" id="downloadBtn">Download Video</button>
+            </form>
+            
+            <div id="result" class="result"></div>
+            
+            <div class="features">
+                <h3>Features:</h3>
+                <ul>
+                    <li>Download videos in various resolutions</li>
+                    <li>Support for MP4 format</li>
+                    <li>Fast and secure downloading</li>
+                </ul>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Note: This is a demonstration interface. Actual download functionality requires pytube library.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('downloadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const resultDiv = document.getElementById('result');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            // Show loading state
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = 'Processing...';
+            resultDiv.innerHTML = '<p class="loading">Processing your request...</p>';
+            
+            // Send POST request
+            fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'url=' + encodeURIComponent(url)
+            })
+            .then(response => response.json())
+            .then(data => {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'Download Video';
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<p class="error">Error: ${data.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>Download Ready!</h3>
+                            <p>${data.message}</p>
+                            <p><strong>Video Title:</strong> ${data.video_title}</p>
+                            <button onclick="downloadFile()">Click to Download</button>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'Download Video';
+                resultDiv.innerHTML = `<p class="error">An error occurred: ${error.message}</p>`;
+            });
+        });
+        
+        function downloadFile() {
+            alert('In a full implementation, this would trigger the actual download.');
+        }
+    </script>
+</body>
+</html>
