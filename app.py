@@ -41,3 +41,29 @@ if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static', exist_ok=True)
     app.run(debug=True)
+    from pytube import YouTube
+
+@app.route('/download', methods=['POST'])
+def download_video():
+    url = request.form.get('url')
+    
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+    
+    try:
+        yt = YouTube(url)
+        # Get the highest resolution progressive stream
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+        
+        # Save to downloads directory
+        download_path = 'downloads'
+        os.makedirs(download_path, exist_ok=True)
+        stream.download(output_path=download_path)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully downloaded {yt.title}',
+            'video_title': yt.title
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
