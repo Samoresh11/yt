@@ -1,7 +1,14 @@
 from flask import Flask, render_template, request, jsonify
 import os
+import re
+from pytube import YouTube
 
 app = Flask(__name__)
+
+# Ensure directories exist
+os.makedirs('templates', exist_ok=True)
+os.makedirs('static', exist_ok=True)
+os.makedirs('downloads', exist_ok=True)
 
 @app.route('/')
 def index():
@@ -14,56 +21,39 @@ def download_video():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
     
-    # In a real implementation, we would use pytube here
-    # For now, we'll just simulate the download process
-    try:
-        # Simulate processing delay
-        import time
-        time.sleep(1)
-        
-        # Here you would implement actual download logic
-        # For example: 
-        # from pytube import YouTube
-        # yt = YouTube(url)
-        # stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-        # stream.download(output_path='downloads/')
-        
-        return jsonify({
-            'success': True,
-            'message': f'Video from {url} is being processed for download',
-            'video_title': 'Sample Video Title'
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    # Create directories if they don't exist
-    os.makedirs('templates', exist_ok=True)
-    os.makedirs('static', exist_ok=True)
-    app.run(debug=True)
-    from pytube import YouTube
-
-@app.route('/download', methods=['POST'])
-def download_video():
-    url = request.form.get('url')
-    
-    if not url:
-        return jsonify({'error': 'No URL provided'}), 400
+    # Validate YouTube URL
+    if not is_valid_youtube_url(url):
+        return jsonify({'error': 'Invalid YouTube URL'}), 400
     
     try:
+        # Create YouTube object
         yt = YouTube(url)
+        
         # Get the highest resolution progressive stream
         stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
         
-        # Save to downloads directory
-        download_path = 'downloads'
-        os.makedirs(download_path, exist_ok=True)
-        stream.download(output_path=download_path)
+        if not stream:
+            return jsonify({'error': 'No suitable video stream found'}), 400
+        
+        # Download the video
+        filename = stream.download(output_path='downloads/')
+        
+        # Extract video title for response
+        video_title = yt.title
         
         return jsonify({
             'success': True,
-            'message': f'Successfully downloaded {yt.title}',
-            'video_title': yt.title
+            'message': f'Successfully downloaded "{video_title}"',
+            'video_title': video_title,
+            'filename': os.path.basename(filename)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def is_valid_youtube_url(url):
+    """Validate YouTube URL format"""
+    pattern = r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+'
+    return re.match(pattern, url) is not None
+
+if __name__ == '__main__':
+    app.run(debug=True)
